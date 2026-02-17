@@ -19,6 +19,16 @@
         </div>
       </header>
 
+      <section id="adminPanel" class="panel admin-panel" hidden>
+        <h2>Admin Setup</h2>
+        <p>Set cards before participants begin (one per line, or comma-separated).</p>
+        <textarea id="adminCardsInput" rows="10" aria-label="Card setup"></textarea>
+        <p id="adminError" class="admin-error" aria-live="polite"></p>
+        <div class="admin-actions">
+          <button id="adminSaveStartBtn" type="button">Save Cards & Start</button>
+        </div>
+      </section>
+
       <section id="sortPanel" class="panel sort-panel">
         <div class="sort-board">
           <section id="criterionPanel" class="criterion-panel criterion-row">
@@ -44,7 +54,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section id="resultsPanel" class="panel">
         <p id="stopMessage" class="stop-message" hidden>
           Thank you. Your sorts have been saved. The results are shown below.
         </p>

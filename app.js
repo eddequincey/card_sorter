@@ -1,4 +1,4 @@
-const PET_TYPES = [
+const FALLBACK_CARD_TYPES = [
   "Dog",
   "Cat",
   "Rabbit",
@@ -13,7 +13,9 @@ const PET_TYPES = [
   "Canary",
 ];
 
+const DEFAULT_CARDS_FILE = "cards.json";
 const STORAGE_KEY = "card-sorter-rounds";
+const CARD_SET_KEY = "card-sorter-card-set";
 const TUTORIAL_PREF_KEY = "card-sorter-hide-tutorial";
 const PILE_WIDTH = 240;
 const PILE_MARGIN = 12;
@@ -25,6 +27,11 @@ const deckCountEl = document.getElementById("deckCount");
 const workspaceEl = document.getElementById("workspace");
 const sortPanelEl = document.getElementById("sortPanel");
 const stopMessageEl = document.getElementById("stopMessage");
+const resultsPanelEl = document.getElementById("resultsPanel");
+const adminPanelEl = document.getElementById("adminPanel");
+const adminCardsInputEl = document.getElementById("adminCardsInput");
+const adminSaveStartBtn = document.getElementById("adminSaveStartBtn");
+const adminErrorEl = document.getElementById("adminError");
 const criterionPanel = document.getElementById("criterionPanel");
 const roundCriterionInput = document.getElementById("roundCriterionInput");
 const exportJsonBtn = document.getElementById("exportJsonBtn");
@@ -56,18 +63,23 @@ let activePileDrag = null;
 let criterionWarningTimeout = null;
 let sessionStopped = false;
 let tutorialCriterionIndex = 0;
+let cardTypes = [...FALLBACK_CARD_TYPES];
+const isAdminMode = new URLSearchParams(window.location.search).has("admin");
 const TUTORIAL_SCENARIOS = [
   { criterion: "Fruit Type", pileA: "Citrus", pileB: "Berries" },
   { criterion: "Common Use", pileA: "Juices", pileB: "Dessert" },
 ];
 
-function setup() {
-  PET_TYPES.forEach((label, index) => {
-    deckEl.appendChild(createCard(`card-${index + 1}`, label));
-  });
+async function setup() {
+  await loadDefaultCardTypesFromFile();
+  loadStoredCardTypes();
+  populateDeckFromCardTypes();
 
   exportJsonBtn.addEventListener("click", exportHistoryAsJson);
   clearSortsBtn.addEventListener("click", clearSavedSorts);
+  if (adminSaveStartBtn) {
+    adminSaveStartBtn.addEventListener("click", saveAdminCardsAndStart);
+  }
   roundCriterionInput.addEventListener("input", updateUiState);
   finalizeForm.addEventListener("submit", (event) => event.preventDefault());
   cancelFinalizeBtn.addEventListener("click", () => {
@@ -91,7 +103,11 @@ function setup() {
   renderHistory();
   setSessionStoppedUi(false);
   updateUiState();
-  openTutorialIfNeeded();
+  if (isAdminMode) {
+    openAdminSetup();
+  } else {
+    openTutorialIfNeeded();
+  }
 }
 
 function createCard(id, label) {
@@ -461,9 +477,7 @@ function resetBoard() {
   sessionStopped = false;
   nextPileId = 1;
 
-  PET_TYPES.forEach((label, index) => {
-    deckEl.appendChild(createCard(`card-${index + 1}`, label));
-  });
+  populateDeckFromCardTypes();
 }
 
 function setSessionStoppedUi(stopped) {
@@ -472,6 +486,36 @@ function setSessionStoppedUi(stopped) {
   }
   if (stopMessageEl) {
     stopMessageEl.hidden = !stopped;
+  }
+}
+
+function openAdminSetup() {
+  if (adminPanelEl) adminPanelEl.hidden = false;
+  if (sortPanelEl) sortPanelEl.hidden = true;
+  if (resultsPanelEl) resultsPanelEl.hidden = true;
+  if (adminCardsInputEl) adminCardsInputEl.value = cardTypes.join("\n");
+  if (adminErrorEl) adminErrorEl.textContent = "";
+}
+
+function saveAdminCardsAndStart() {
+  if (!adminCardsInputEl) return;
+  if (adminErrorEl) adminErrorEl.textContent = "";
+  try {
+    const parsed = parseImportedCards(adminCardsInputEl.value, "cards.txt");
+    if (parsed.length < 2) {
+      throw new Error("Please provide at least 2 card labels.");
+    }
+    cardTypes = parsed;
+    localStorage.setItem(CARD_SET_KEY, JSON.stringify(cardTypes));
+    resetBoard();
+    updateUiState();
+    if (adminPanelEl) adminPanelEl.hidden = true;
+    if (resultsPanelEl) resultsPanelEl.hidden = false;
+    setSessionStoppedUi(false);
+    openTutorialIfNeeded();
+  } catch (error) {
+    if (!adminErrorEl) return;
+    adminErrorEl.textContent = error instanceof Error ? error.message : "Unable to save cards.";
   }
 }
 
@@ -675,6 +719,85 @@ function exportHistoryAsJson() {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+function parseImportedCards(content, filename) {
+  const lowerName = filename.toLowerCase();
+  let items = [];
+
+  if (lowerName.endsWith(".json")) {
+    const parsed = JSON.parse(content);
+    const source = Array.isArray(parsed) ? parsed : parsed?.cards;
+    if (!Array.isArray(source)) {
+      throw new Error("JSON must be an array of card labels or an object with a cards array.");
+    }
+    items = source;
+  } else {
+    items = content.split(/[\r\n,;]+/);
+  }
+
+  const cleaned = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    if (typeof item !== "string") return;
+    const value = item.trim();
+    if (!value) return;
+    const key = value.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    cleaned.push(value);
+  });
+  return cleaned;
+}
+
+function normalizeCardLabels(items) {
+  if (!Array.isArray(items)) return [];
+  const cleaned = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    if (typeof item !== "string") return;
+    const value = item.trim();
+    if (!value) return;
+    const key = value.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    cleaned.push(value);
+  });
+  return cleaned;
+}
+
+async function loadDefaultCardTypesFromFile() {
+  try {
+    const response = await fetch(DEFAULT_CARDS_FILE, { cache: "no-store" });
+    if (!response.ok) return;
+    const parsed = await response.json();
+    const source = Array.isArray(parsed) ? parsed : parsed?.cards;
+    const cleaned = normalizeCardLabels(source);
+    if (cleaned.length >= 2) {
+      cardTypes = cleaned;
+    }
+  } catch {
+    // Use fallback list when cards.json is unavailable (e.g. local file access).
+    cardTypes = [...FALLBACK_CARD_TYPES];
+  }
+}
+
+function loadStoredCardTypes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CARD_SET_KEY) || "null");
+    const cleaned = normalizeCardLabels(parsed);
+    if (cleaned.length >= 2) {
+      cardTypes = cleaned;
+    }
+  } catch {
+    // Keep current defaults loaded from cards.json/fallback.
+  }
+}
+
+function populateDeckFromCardTypes() {
+  cardTypes.forEach((label, index) => {
+    deckEl.appendChild(createCard(`card-${index + 1}`, label));
+  });
 }
 
 function clearSavedSorts() {

@@ -139,6 +139,45 @@ button:disabled {
   padding: 0.7rem;
 }
 
+.admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-panel[hidden] {
+  display: none !important;
+}
+
+.admin-panel h2 {
+  margin: 0;
+}
+
+.admin-panel p {
+  margin: 0;
+}
+
+.admin-panel textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  resize: vertical;
+  min-height: 180px;
+  font: inherit;
+}
+
+.admin-error {
+  min-height: 1.1rem;
+  color: #a23434;
+  font-size: 0.9rem;
+}
+
+.admin-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .criterion-panel {
   display: flex;
   flex-direction: column;
