@@ -42,7 +42,7 @@ body {
 }
 
 .brand-logo {
-  width: min(560px, 100%);
+  width: min(260px, 100%);
   height: auto;
   display: block;
 }
@@ -1094,7 +1094,7 @@ dialog::backdrop {
   }
 
   .brand-logo {
-    width: min(360px, 100%);
+    width: min(220px, 100%);
     height: auto;
   }
 
