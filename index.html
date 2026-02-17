@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Repeated Single-Criterion Card Sorter</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <img
+            class="brand-logo"
+            src="ChatGPT Image Feb 17, 2026, 01_13_16 PM.png"
+            alt="Card Sorter Repeated Single-Criterion"
+          />
+          <h1 class="visually-hidden">Repeated Single-Criterion Card Sorter</h1>
+        </div>
+      </header>
+
+      <section id="sortPanel" class="panel sort-panel">
+        <div class="sort-board">
+          <section id="criterionPanel" class="criterion-panel criterion-row">
+            <div class="criterion-field">
+              <label for="roundCriterionInput" class="criterion-label">Criterion:</label>
+              <input
+                id="roundCriterionInput"
+                type="text"
+                maxlength="120"
+                placeholder="Enter a criterion to sort the cards by"
+                autocomplete="off"
+              />
+            </div>
+          </section>
+          <section class="sort-pane sort-pane-deck">
+            <h2>Deck (<span id="deckCount">12</span> unsorted)</h2>
+            <div id="deck" class="dropzone deck" aria-label="Unsorted cards"></div>
+          </section>
+          <section class="sort-pane sort-pane-workspace">
+            <h2>Workspace</h2>
+            <div id="workspace" class="workspace dropzone" aria-label="Sorting workspace"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="panel">
+        <p id="stopMessage" class="stop-message" hidden>
+          Thank you. Your sorts have been saved. The results are shown below.
+        </p>
+        <div class="results-header">
+          <h2>Saved sorts (<span id="roundCount">0</span>)</h2>
+          <div class="controls">
+            <button id="exportJsonBtn" type="button">Export Saved Sorts</button>
+            <button id="clearSortsBtn" class="clear-btn" type="button">Clear Saved Sorts</button>
+          </div>
+        </div>
+        <ul id="history" class="history"></ul>
+      </section>
+    </main>
+
+    <template id="cardTemplate">
+      <article class="card" draggable="true"></article>
+    </template>
+
+    <dialog id="tutorialDialog">
+      <form id="tutorialForm" method="dialog" class="tutorial-form">
+        <h2>Instructions</h2>
+        <ul class="tutorial-instructions">
+          <li>You will sort the same set of cards into named piles multiple times.</li>
+          <li>Each time, you should use a different criterion of your own choosing.</li>
+          <li>There are no right or wrong answers.</li>
+          <li>Piles can include “don’t know” and “not applicable”.</li>
+        </ul>
+        <div class="tutorial-stage" aria-hidden="true">
+          <div class="tutorial-criterion-field">
+            <span class="tutorial-criterion-label">Criterion:</span>
+            <span id="tutorialCriterionValue" class="tutorial-criterion-value">Fruit Type</span>
+          </div>
+          <div class="tutorial-labels">
+            <span>Deck</span>
+            <span>Workspace</span>
+          </div>
+          <div class="tutorial-deck-card tutorial-deck-card-1">Orange</div>
+          <div class="tutorial-deck-card tutorial-deck-card-2">Lemon</div>
+          <div class="tutorial-deck-card tutorial-deck-card-3">Strawberry</div>
+          <div class="tutorial-deck-card tutorial-deck-card-4">Blueberry</div>
+          <div class="tutorial-pile tutorial-pile-a">
+            <div class="tutorial-pile-header">
+              <span class="tutorial-mini-handle">:::</span>
+              <div class="tutorial-name-field">
+                <span id="tutorialPileNameA" class="tutorial-name-text">Citrus</span>
+              </div>
+            </div>
+            <div class="tutorial-pile-body">
+              <span class="tutorial-pile-chip tutorial-pile-chip-a1">Orange</span>
+              <span class="tutorial-pile-chip tutorial-pile-chip-a2">Lemon</span>
+            </div>
+          </div>
+          <div class="tutorial-pile tutorial-pile-b">
+            <div class="tutorial-pile-header">
+              <span class="tutorial-mini-handle">:::</span>
+              <div class="tutorial-name-field">
+                <span id="tutorialPileNameB" class="tutorial-name-text tutorial-name-text-b">Berries</span>
+              </div>
+            </div>
+            <div class="tutorial-pile-body">
+              <span class="tutorial-pile-chip tutorial-pile-chip-b1">Strawberry</span>
+              <span class="tutorial-pile-chip tutorial-pile-chip-b2">Blueberry</span>
+            </div>
+          </div>
+          <div class="tutorial-step tutorial-step-1">1. Set a criterion before sorting</div>
+          <div class="tutorial-step tutorial-step-2">2. Drag a card into the workspace to create the first pile and name it</div>
+          <div class="tutorial-step tutorial-step-3">3. Drag another card to create another pile</div>
+          <div class="tutorial-step tutorial-step-4">4. Add the cards to the piles</div>
+          <div class="tutorial-step tutorial-step-5">5. You will be asked to save the sort before starting the next one</div>
+        </div>
+        <label class="tutorial-checkbox">
+          <input id="tutorialDontShow" type="checkbox" />
+          Don't show this again
+        </label>
+        <div class="tutorial-actions">
+          <button type="submit">Start sorting</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="finalizeDialog">
+      <form id="finalizeForm" method="dialog" class="finalize-form">
+        <h2>Review This Sort</h2>
+        <label for="finalizeCriterionInput">Confirm criterion</label>
+        <input id="finalizeCriterionInput" type="text" maxlength="120" required />
+        <p class="finalize-help">Confirm pile names. Default names like “Pile 1” are not allowed.</p>
+        <div id="finalizePileNames" class="finalize-piles"></div>
+        <p id="finalizeError" class="finalize-error" aria-live="polite"></p>
+        <div class="finalize-actions">
+          <button id="cancelFinalizeBtn" type="button">Go back</button>
+          <button id="saveStopBtn" type="button">Save & stop</button>
+          <button id="saveContinueBtn" type="button">Save & sort again</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
